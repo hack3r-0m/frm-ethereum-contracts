@@ -12,7 +12,7 @@
     "mocha": "^6.2.0",
     "truffle": "^5.0.31",
     "truffle-hdwallet-provider": "^1.0.15",
-    "truffle-plugin-verify": "^0.6.12",
+    "truffle-plugin-verify": "^0.5.8",
     "truffle-security": "^1.5.3"
   },
   "dependencies": {

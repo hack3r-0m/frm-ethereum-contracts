@@ -10921,21 +10921,7 @@ socketcluster-client@^14.2.1:
     uuid "3.2.1"
     ws "7.1.0"
 
-solc@^0.6.12:
-  version "0.5.17"
-  resolved "https://registry.yarnpkg.com/solc/-/solc-0.5.17.tgz#8a76c50e98d49ca7610cca2fdc78ff3016540c67"
-  integrity sha512-qpX+PGaU0Q3c6lh2vDzMoIbhv6bIrecI4bYsx+xUs01xsGFnY6Nr0L8y/QMyutTnrHN6Lb/Yl672ZVRqxka96w==
-  dependencies:
-    command-exists "^1.2.8"
-    commander "3.0.2"
-    fs-extra "^0.30.0"
-    js-sha3 "0.8.0"
-    memorystream "^0.3.1"
-    require-from-string "^2.0.0"
-    semver "^5.5.0"
-    tmp "0.0.33"
-
-solc@^0.6.0:
+solc@^0.6.0, solc@^0.6.12:
   version "0.6.12"
   resolved "https://registry.yarnpkg.com/solc/-/solc-0.6.12.tgz#48ac854e0c729361b22a7483645077f58cba080e"
   integrity sha512-Lm0Ql2G9Qc7yPP2Ba+WNmzw2jwsrd3u4PobHYlSOxaut3TtUbj9+5ZrT6f4DUpNPEoBaFUOEg9Op9C0mk7ge9g==
@@ -11651,7 +11637,7 @@ truffle-hdwallet-provider@^1.0.15:
     web3 "1.2.1"
     websocket "^1.0.28"
 
-truffle-plugin-verify@^0.6.12:
+truffle-plugin-verify@^0.5.8:
   version "0.5.8"
   resolved "https://registry.yarnpkg.com/truffle-plugin-verify/-/truffle-plugin-verify-0.5.8.tgz#9564c2860016ede93f36249a11ec3147fa750bad"
   integrity sha512-q45RI54mDu+8V5vbWfO4sIdUQqDX2AYEkr4T48CijQIIRlWYGDMFkw577tgSbf2yzmMueAKOjTxLTHX0osR+bQ==
@@ -11690,7 +11676,7 @@ truffle-security@^1.5.3:
     proxyquire "^2.1.0"
     remix-lib ">=0.4.1"
     sleep "6.1.0"
-    solc "^0.6.12"
+    solc "^0.5.8"
     tiny-async-pool "^1.0.4"
     uuid "^3.3.3"
 
