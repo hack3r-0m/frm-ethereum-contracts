@@ -1,12 +1,11 @@
-pragma solidity ^0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-contract Festaking {
+contract FestakingFarm {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
 
     mapping (address => uint256) private _stakes;
 
@@ -73,7 +72,7 @@ contract Festaking {
         require(withdrawableAmount >= 0, "Festaking: withdrawable amount cannot be negative");
         require(withdrawableAmount <= rewardAmount, "Festaking: withdrawable amount must be less than or equal to the reward amount");
         address from = msg.sender;
-        if (!_payMe(from, rewardAmount)) {
+        if (!_payMe(from, rewardAmount, tokenAddress)) {
             return false;
         }
 
@@ -129,8 +128,8 @@ contract Festaking {
         rewardBalance = rewardBalance.sub(reward);
         stakedBalance = stakedBalance.sub(amount);
         _stakes[from] = _stakes[from].sub(amount);
-        boolean principalPaid = _payDirect(from, amount, tokenAddress);
-        boolean rewardPaid = _payDirect(from, reward, rewardTokenAddress);
+        bool principalPaid = _payDirect(from, amount, tokenAddress);
+        bool rewardPaid = _payDirect(from, reward, rewardTokenAddress);
         require(principalPaid && rewardPaid, "Festaking: error paying");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, reward);
         return true;
@@ -142,8 +141,8 @@ contract Festaking {
     returns (bool) {
         uint256 reward = (rewardBalance.mul(amount)).div(stakedBalance);
         _stakes[from] = _stakes[from].sub(amount);
-        boolean principalPaid = _payDirect(from, amount, tokenAddress);
-        boolean rewardPaid = _payDirect(from, reward, rewardTokenAddress);
+        bool principalPaid = _payDirect(from, amount, tokenAddress);
+        bool rewardPaid = _payDirect(from, reward, rewardTokenAddress);
         require(principalPaid && rewardPaid, "Festaking: error paying");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, reward);
         return true;
@@ -176,30 +175,30 @@ contract Festaking {
         return true;
     }
 
-    function _payMe(address payer, uint256 amount, unit256 token)
+    function _payMe(address payer, uint256 amount, address token)
     private
     returns (bool) {
         return _payTo(payer, address(this), amount, token);
     }
 
-    function _payTo(address allower, address receiver, uint256 amount, unit256 token)
+    function _payTo(address allower, address receiver, uint256 amount, address token)
     private
     returns (bool) {
         // Request to transfer amount from the contract to receiver.
         // contract does not own the funds, so the allower must have added allowance to the contract
         // Allower is the original owner.
-        ERC20Interface = IERC20(token);
-        return ERC20Interface.safeTransferFrom(allower, receiver, amount);
+        ERC20Interface = ERC20(token);
+        return ERC20Interface.transferFrom(allower, receiver, amount);
     }
 
-    function _payDirect(address to, uint256 amount, uint256 token)
+    function _payDirect(address to, uint256 amount, address token)
     private
     returns (bool) {
         if (amount == 0) {
             return true;
         }
-        ERC20Interface = IERC20(token);
-        return ERC20Interface.safeTransfer(to, amount);
+        ERC20Interface = ERC20(token);
+        return ERC20Interface.transfer(to, amount);
     }
 
     modifier _realAddress(address addr) {
