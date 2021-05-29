@@ -4,7 +4,7 @@ pragma solidity ^0.6.12;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract FestakingFarm {
+contract CestakingFarm {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _stakes;
@@ -38,29 +38,29 @@ contract FestakingFarm {
         uint withdrawEnds_,
         uint256 stakingCap_) public {
         name = name_;
-        require(tokenAddress_ != address(0), "Festaking: 0 address");
+        require(tokenAddress_ != address(0), "Cestaking: 0 address");
         tokenAddress = tokenAddress_;
 
-        require(rewardTokenAddress_ != address(0), "Festaking: 0 reward address");
+        require(rewardTokenAddress_ != address(0), "Cestaking: 0 reward address");
         rewardTokenAddress = rewardTokenAddress_;
 
-        require(stakingStarts_ > 0, "Festaking: zero staking start time");
+        require(stakingStarts_ > 0, "Cestaking: zero staking start time");
         if (stakingStarts_ < now) {
             stakingStarts = now;
         } else {
             stakingStarts = stakingStarts_;
         }
 
-        require(stakingEnds_ > stakingStarts, "Festaking: staking end must be after staking starts");
+        require(stakingEnds_ > stakingStarts, "Cestaking: staking end must be after staking starts");
         stakingEnds = stakingEnds_;
 
-        require(withdrawStarts_ >= stakingEnds, "Festaking: withdrawStarts must be after staking ends");
+        require(withdrawStarts_ >= stakingEnds, "Cestaking: withdrawStarts must be after staking ends");
         withdrawStarts = withdrawStarts_;
 
-        require(withdrawEnds_ > withdrawStarts, "Festaking: withdrawEnds must be after withdraw starts");
+        require(withdrawEnds_ > withdrawStarts, "Cestaking: withdrawEnds must be after withdraw starts");
         withdrawEnds = withdrawEnds_;
 
-        require(stakingCap_ > 0, "Festaking: stakingCap must be positive");
+        require(stakingCap_ > 0, "Cestaking: stakingCap must be positive");
         stakingCap = stakingCap_;
     }
 
@@ -68,9 +68,9 @@ contract FestakingFarm {
     public
     _before(withdrawStarts)
     returns (bool) {
-        require(rewardAmount > 0, "Festaking: reward must be positive");
-        require(withdrawableAmount >= 0, "Festaking: withdrawable amount cannot be negative");
-        require(withdrawableAmount <= rewardAmount, "Festaking: withdrawable amount must be less than or equal to the reward amount");
+        require(rewardAmount > 0, "Cestaking: reward must be positive");
+        require(withdrawableAmount >= 0, "Cestaking: withdrawable amount cannot be negative");
+        require(withdrawableAmount <= rewardAmount, "Cestaking: withdrawable amount must be less than or equal to the reward amount");
         address from = msg.sender;
         if (!_payMe(from, rewardAmount, tokenAddress)) {
             return false;
@@ -106,7 +106,7 @@ contract FestakingFarm {
     _realAddress(msg.sender)
     returns (bool) {
         address from = msg.sender;
-        require(amount <= _stakes[from], "Festaking: not enough balance");
+        require(amount <= _stakes[from], "Cestaking: not enough balance");
         if (now < withdrawEnds) {
             return _withdrawEarly(from, amount);
         } else {
@@ -130,7 +130,7 @@ contract FestakingFarm {
         _stakes[from] = _stakes[from].sub(amount);
         bool principalPaid = _payDirect(from, amount, tokenAddress);
         bool rewardPaid = _payDirect(from, reward, rewardTokenAddress);
-        require(principalPaid && rewardPaid, "Festaking: error paying");
+        require(principalPaid && rewardPaid, "Cestaking: error paying");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, reward);
         return true;
     }
@@ -143,7 +143,7 @@ contract FestakingFarm {
         _stakes[from] = _stakes[from].sub(amount);
         bool principalPaid = _payDirect(from, amount, tokenAddress);
         bool rewardPaid = _payDirect(from, reward, rewardTokenAddress);
-        require(principalPaid && rewardPaid, "Festaking: error paying");
+        require(principalPaid && rewardPaid, "Cestaking: error paying");
         emit PaidOut(tokenAddress, rewardTokenAddress, from, amount, reward);
         return true;
     }
@@ -161,8 +161,8 @@ contract FestakingFarm {
         }
         // These requires are not necessary, because it will never happen, but won't hurt to double check
         // this is because stakedTotal and stakedBalance are only modified in this method during the staking period
-        require(remaining > 0, "Festaking: Staking cap is filled");
-        require((remaining + stakedTotal) <= stakingCap, "Festaking: this will increase staking amount pass the cap");
+        require(remaining > 0, "Cestaking: Staking cap is filled");
+        require((remaining + stakedTotal) <= stakingCap, "Cestaking: this will increase staking amount pass the cap");
         if (!_payMe(staker, remaining, tokenAddress)) {
             return false;
         }
@@ -202,22 +202,22 @@ contract FestakingFarm {
     }
 
     modifier _realAddress(address addr) {
-        require(addr != address(0), "Festaking: zero address");
+        require(addr != address(0), "Cestaking: zero address");
         _;
     }
 
     modifier _positive(uint256 amount) {
-        require(amount >= 0, "Festaking: negative amount");
+        require(amount >= 0, "Cestaking: negative amount");
         _;
     }
 
     modifier _after(uint eventTime) {
-        require(now >= eventTime, "Festaking: bad timing for the request");
+        require(now >= eventTime, "Cestaking: bad timing for the request");
         _;
     }
 
     modifier _before(uint eventTime) {
-        require(now < eventTime, "Festaking: bad timing for the request");
+        require(now < eventTime, "Cestaking: bad timing for the request");
         _;
     }
 }

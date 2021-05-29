@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
-import "./Festaking.sol";
+import "./Cestaking.sol";
 
-contract FestakingTest is Festaking {
+contract CestakingFarmTest is Cestaking {
     uint public GAP = 60000;
     uint public SEC = 1000;
 
     constructor (string memory name_,
         address tokenAddress_,
+        address rewardTokenAddress_,
         uint256 stakingCap_)
-    Festaking(name_, tokenAddress_, now, now + GAP, now + GAP, now + GAP * 2, stakingCap_)
+    Cestaking(name_, tokenAddress_, now, now + GAP, now + GAP, now + GAP * 2, stakingCap_)
     public { }
 
     function setStakingPeriod() public {

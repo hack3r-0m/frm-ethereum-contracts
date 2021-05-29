@@ -5,9 +5,9 @@
 
 We use a basic `burnable` ERC20 contract for Ferrum Network tokens. The contract implementations is directly based on the (https://github.com/OpenZeppelin/openzeppelin-contracts)[OpenZepplin] implementation of ERC-20.
 
-## Festaking
+## Cestaking
 
-Festaking is a flexible staking contract for ERC20 tokens.
+Cestaking is a flexible staking contract for ERC20 tokens.
 
 It supports the following configuration:
 
@@ -21,7 +21,7 @@ that were not withdrawn until maturity time.
 - Prevent withdraw before a given withdraw start date.
 - No compounded return. Returns are linearly distributed.
 
-### Festaking Parameters
+### Cestaking Parameters
 
 ```
         address tokenAddress_,
