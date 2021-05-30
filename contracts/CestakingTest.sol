@@ -9,19 +9,18 @@ contract CestakingTest is Cestaking {
     constructor (string memory name_,
         address tokenAddress_,
         uint256 stakingCap_)
-    Cestaking(name_, tokenAddress_, now, now + GAP, now + GAP, now + GAP * 2, stakingCap_)
-    public { }
+    Cestaking(name_, tokenAddress_, block.timestamp, block.timestamp + GAP, block.timestamp + GAP, block.timestamp + GAP * 2, stakingCap_) { }
 
     function setStakingPeriod() public {
-        setStakingStart(now - SEC);
+        setStakingStart(block.timestamp - SEC);
     }
 
     function setEarlyWithdrawalPeriod(uint offset) public {
-        setStakingStart(now - GAP - offset);
+        setStakingStart(block.timestamp - GAP - offset);
     }
 
     function setAfterWithdrawal() public {
-        setStakingStart(now - GAP * 2 - SEC);
+        setStakingStart(block.timestamp - GAP * 2 - SEC);
     }
 
     function setStakingStart(uint time) private {

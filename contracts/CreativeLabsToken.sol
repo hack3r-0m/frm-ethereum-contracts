@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract CreativeLabsToken is ERC20Burnable {
     string internal _name = "CreativeLabs";
@@ -11,7 +11,7 @@ contract CreativeLabsToken is ERC20Burnable {
     constructor() ERC20(
         _name,
         _symbol
-    ) public {
+    ) {
         _mint(msg.sender, INITIAL_SUPPLY);
     }
 }

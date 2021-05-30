@@ -2,7 +2,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./SafeMath.sol";
 
 contract CestakingFarm {
     using SafeMath for uint256;
@@ -36,7 +36,7 @@ contract CestakingFarm {
         uint stakingEnds_,
         uint withdrawStarts_,
         uint withdrawEnds_,
-        uint256 stakingCap_) public {
+        uint256 stakingCap_) {
         name = name_;
         require(tokenAddress_ != address(0), "Cestaking: 0 address");
         tokenAddress = tokenAddress_;
@@ -45,8 +45,8 @@ contract CestakingFarm {
         rewardTokenAddress = rewardTokenAddress_;
 
         require(stakingStarts_ > 0, "Cestaking: zero staking start time");
-        if (stakingStarts_ < now) {
-            stakingStarts = now;
+        if (stakingStarts_ < block.timestamp) {
+            stakingStarts = block.timestamp;
         } else {
             stakingStarts = stakingStarts_;
         }
@@ -107,7 +107,7 @@ contract CestakingFarm {
     returns (bool) {
         address from = msg.sender;
         require(amount <= _stakes[from], "Cestaking: not enough balance");
-        if (now < withdrawEnds) {
+        if (block.timestamp < withdrawEnds) {
             return _withdrawEarly(from, amount);
         } else {
             return _withdrawAfterClose(from, amount);
@@ -119,11 +119,11 @@ contract CestakingFarm {
     _realAddress(from)
     returns (bool) {
         // This is the formula to calculate reward:
-        // r = (earlyWithdrawReward / stakedTotal) * (now - stakingEnds) / (withdrawEnds - stakingEnds)
+        // r = (earlyWithdrawReward / stakedTotal) * (block.timestamp - stakingEnds) / (withdrawEnds - stakingEnds)
         // w = (1+r) * a
         uint256 denom = (withdrawEnds.sub(stakingEnds)).mul(stakedTotal);
         uint256 reward = (
-        ( (now.sub(stakingEnds)).mul(earlyWithdrawReward) ).mul(amount)
+        ( (block.timestamp.sub(stakingEnds)).mul(earlyWithdrawReward) ).mul(amount)
         ).div(denom);
         rewardBalance = rewardBalance.sub(reward);
         stakedBalance = stakedBalance.sub(amount);
@@ -212,12 +212,12 @@ contract CestakingFarm {
     }
 
     modifier _after(uint eventTime) {
-        require(now >= eventTime, "Cestaking: bad timing for the request");
+        require(block.timestamp >= eventTime, "Cestaking: bad timing for the request");
         _;
     }
 
     modifier _before(uint eventTime) {
-        require(now < eventTime, "Cestaking: bad timing for the request");
+        require(block.timestamp < eventTime, "Cestaking: bad timing for the request");
         _;
     }
 }
