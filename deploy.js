@@ -56,14 +56,14 @@ async function exec() {
   )
 
   const deploy_CestakingFarm = await CestakingFarmFactroy.deploy(
-    'CE STAKING',
+    'CE STAKING FARM',
     deploy_CLT.address,
     deploy_CLTX.address,
     timestamp,
     timestamp + 86400000,
     timestamp + 86400000 + 86400000,
     timestamp + 86400000 + 86400000 + 86400000,
-    '33171875000000000000000000',
+    '3300000000000000000000',
   )
   console.log(deploy_CestakingFarm)
 }
