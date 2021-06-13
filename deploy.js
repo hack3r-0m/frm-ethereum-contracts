@@ -38,15 +38,7 @@ async function exec() {
 
   const timestamp = Date.now()
 
-  const deploy_Cestaking = await CestakingFactroy.deploy(
-    'CE STAKING',
-    deploy_CLT.address,
-    timestamp,
-    timestamp + 86400000,
-    timestamp + 86400000 + 86400000,
-    timestamp + 86400000 + 86400000 + 86400000,
-    '33171875000000000000000000',
-  )
+  const deploy_Cestaking = await CestakingFactroy.deploy()
   console.log(deploy_Cestaking)
 
   const CestakingFarmFactroy = new ethers.ContractFactory(

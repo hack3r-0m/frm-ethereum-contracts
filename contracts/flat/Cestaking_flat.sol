@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: MIT
 // File: @openzeppelin/contracts/token/ERC20/IERC20.sol
 
-
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
@@ -81,8 +80,6 @@ interface IERC20 {
 
 // File: @openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol
 
-
-
 pragma solidity ^0.8.0;
 
 
@@ -110,8 +107,6 @@ interface IERC20Metadata is IERC20 {
 
 // File: @openzeppelin/contracts/utils/Context.sol
 
-
-
 pragma solidity ^0.8.0;
 
 /*
@@ -136,8 +131,6 @@ abstract contract Context {
 }
 
 // File: @openzeppelin/contracts/token/ERC20/ERC20.sol
-
-
 
 pragma solidity ^0.8.0;
 
@@ -441,9 +434,75 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual { }
 }
 
+// File: @openzeppelin/contracts/access/Ownable.sol
+
+pragma solidity ^0.8.0;
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * By default, the owner account will be the one that deploys the contract. This
+ * can later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
+abstract contract Ownable is Context {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor () {
+        address msgSender = _msgSender();
+        _owner = msgSender;
+        emit OwnershipTransferred(address(0), msgSender);
+    }
+
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public virtual onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
 // File: contracts/SafeMath.sol
-
-
 pragma solidity 0.8.4;
 
 library SafeMath {
@@ -474,212 +533,422 @@ library SafeMath {
 
 // File: contracts/Cestaking.sol
 
-
 pragma solidity 0.8.4;
 
 
 
-contract Cestaking {
+
+contract Cestaking is Ownable {
     using SafeMath for uint256;
 
-    mapping (address => uint256) private _stakes;
+    // season to stake records mapping
+    mapping(uint256 => mapping(address => uint256)) stakes;
+    // remaining balance of users in each season
+    mapping(uint256 => mapping(address => uint256)) remainingBalance;
 
-    string public name;
-    address  public tokenAddress;
-    uint public stakingStarts;
-    uint public stakingEnds;
-    uint public withdrawStarts;
-    uint public withdrawEnds;
-    uint256 public stakedTotal;
-    uint256 public stakingCap;
-    uint256 public totalReward;
-    uint256 public earlyWithdrawReward;
-    uint256 public rewardBalance;
-    uint256 public stakedBalance;
+    uint256 currentActiveSeason;
+
+    struct StakingSeason {
+        address tokenAddress;
+        uint256 stakingStarts;
+        uint256 stakingEnds;
+        uint256 withdrawStarts;
+        uint256 withdrawEnds;
+        uint256 stakedTotal;
+        uint256 stakingCap;
+        uint256 totalReward;
+        uint256 earlyWithdrawReward;
+        uint256 rewardBalance;
+        uint256 stakedBalance;
+    }
+
+    StakingSeason[] stakingSeasons;
+
+    function deleteLastSeason() external onlyOwner {
+        require(
+            stakingSeasons[stakingSeasons.length - 1].stakingStarts >
+                block.timestamp,
+            "Cestaking: cannot remove last added season after staking has started"
+        );
+        stakingSeasons.pop();
+    }
 
     ERC20 public ERC20Interface;
-    event Staked(address indexed token, address indexed staker_, uint256 requestedAmount_, uint256 stakedAmount_);
-    event PaidOut(address indexed token, address indexed staker_, uint256 amount_, uint256 reward_);
-    event Refunded(address indexed token, address indexed staker_, uint256 amount_);
+
+    event Staked(
+        address indexed token,
+        address indexed staker_,
+        uint256 requestedAmount_,
+        uint256 stakedAmount_,
+        uint256 season
+    );
+    event PaidOut(
+        address indexed token,
+        address indexed staker_,
+        uint256 amount_,
+        uint256 reward_,
+        uint256 season
+    );
+    event Refunded(
+        address indexed token,
+        address indexed staker_,
+        uint256 amount_,
+        uint256 season
+    );
 
     /**
      */
-    constructor (string memory name_,
+    function addSeason(
         address tokenAddress_,
-        uint stakingStarts_,
-        uint stakingEnds_,
-        uint withdrawStarts_,
-        uint withdrawEnds_,
-        uint256 stakingCap_) {
-        name = name_;
+        uint256 stakingStarts_,
+        uint256 stakingEnds_,
+        uint256 withdrawStarts_,
+        uint256 withdrawEnds_,
+        uint256 stakingCap_
+    ) external onlyOwner {
         require(tokenAddress_ != address(0), "Cestaking: 0 address");
-        tokenAddress = tokenAddress_;
+
+        require(
+            stakingStarts_ >
+                stakingSeasons[stakingSeasons.length - 1].withdrawEnds,
+            "Cestaking: Next season must start after withdraw period of previous ends"
+        );
 
         require(stakingStarts_ > 0, "Cestaking: zero staking start time");
+
+        uint256 stakingStarts;
+
         if (stakingStarts_ < block.timestamp) {
             stakingStarts = block.timestamp;
         } else {
             stakingStarts = stakingStarts_;
         }
 
-        require(stakingEnds_ > stakingStarts, "Cestaking: staking end must be after staking starts");
-        stakingEnds = stakingEnds_;
+        require(
+            stakingEnds_ > stakingSeasons[currentActiveSeason].stakingStarts,
+            "Cestaking: staking end must be after staking starts"
+        );
 
-        require(withdrawStarts_ >= stakingEnds, "Cestaking: withdrawStarts must be after staking ends");
-        withdrawStarts = withdrawStarts_;
+        require(
+            withdrawStarts_ >= stakingSeasons[currentActiveSeason].stakingEnds,
+            "Cestaking: withdrawStarts must be after staking ends"
+        );
 
-        require(withdrawEnds_ > withdrawStarts, "Cestaking: withdrawEnds must be after withdraw starts");
-        withdrawEnds = withdrawEnds_;
+        require(
+            withdrawEnds_ > stakingSeasons[currentActiveSeason].withdrawStarts,
+            "Cestaking: withdrawEnds must be after withdraw starts"
+        );
 
         require(stakingCap_ > 0, "Cestaking: stakingCap must be positive");
-        stakingCap = stakingCap_;
+
+        stakingSeasons.push(
+            StakingSeason({
+                tokenAddress: tokenAddress_,
+                stakingStarts: stakingStarts,
+                stakingEnds: stakingEnds_,
+                withdrawStarts: withdrawStarts_,
+                withdrawEnds: withdrawEnds_,
+                stakedTotal: 0,
+                stakingCap: stakingCap_,
+                totalReward: 0,
+                earlyWithdrawReward: 0,
+                rewardBalance: 0,
+                stakedBalance: 0
+            })
+        );
     }
 
+    // rewards would be added in current active season
     function addReward(uint256 rewardAmount, uint256 withdrawableAmount)
-    public
-    _before(withdrawStarts)
-    _hasAllowance(msg.sender, rewardAmount)
-    returns (bool) {
+        public
+        _before(stakingSeasons[currentActiveSeason].withdrawStarts)
+        _hasAllowance(msg.sender, rewardAmount)
+        _checkSeasonUpdate()
+        returns (bool)
+    {
+        // require(stakingSeasons.length != 0, "Cestaking: No season exists");
         require(rewardAmount > 0, "Cestaking: reward must be positive");
-        require(withdrawableAmount >= 0, "Cestaking: withdrawable amount cannot be negative");
-        require(withdrawableAmount <= rewardAmount, "Cestaking: withdrawable amount must be less than or equal to the reward amount");
+        require(
+            withdrawableAmount >= 0,
+            "Cestaking: withdrawable amount cannot be negative"
+        );
+        require(
+            withdrawableAmount <= rewardAmount,
+            "Cestaking: withdrawable amount must be less than or equal to the reward amount"
+        );
         address from = msg.sender;
         if (!_payMe(from, rewardAmount)) {
             return false;
         }
 
-        totalReward = totalReward.add(rewardAmount);
-        rewardBalance = totalReward;
-        earlyWithdrawReward = earlyWithdrawReward.add(withdrawableAmount);
+        stakingSeasons[currentActiveSeason].totalReward = stakingSeasons[
+            currentActiveSeason
+        ]
+            .totalReward
+            .add(rewardAmount);
+        stakingSeasons[currentActiveSeason].rewardBalance = stakingSeasons[
+            currentActiveSeason
+        ]
+            .totalReward;
+        stakingSeasons[currentActiveSeason]
+            .earlyWithdrawReward = stakingSeasons[currentActiveSeason]
+            .earlyWithdrawReward
+            .add(withdrawableAmount);
         return true;
     }
 
-    function stakeOf(address account) public view returns (uint256) {
-        return _stakes[account];
+    function currentStakeOf(address account) public view returns (uint256) {
+        return stakes[currentActiveSeason][account];
+    }
+
+    function stakeOf(address account, uint256 season)
+        public
+        view
+        returns (uint256)
+    {
+        return stakes[season][account];
     }
 
     /**
-    * Requirements:
-    * - `amount` Amount to be staked
-    */
+     * Requirements:
+     * - `amount` Amount to be staked
+     */
+
+    // stake will be added in current season
     function stake(uint256 amount)
-    public
-    _positive(amount)
-    _realAddress(msg.sender)
-    returns (bool) {
+        public
+        _positive(amount)
+        _realAddress(msg.sender)
+        _checkSeasonUpdate()
+        returns (bool)
+    {
         address from = msg.sender;
         return _stake(from, amount);
     }
 
     function withdraw(uint256 amount)
-    public
-    _after(withdrawStarts)
-    _positive(amount)
-    _realAddress(msg.sender)
-    returns (bool) {
+        public
+        _after(stakingSeasons[currentActiveSeason].withdrawStarts)
+        _positive(amount)
+        _realAddress(msg.sender)
+        returns (bool)
+    {
         address from = msg.sender;
-        require(amount <= _stakes[from], "Cestaking: not enough balance");
-        if (block.timestamp < withdrawEnds) {
+        require(
+            amount <= stakes[currentActiveSeason][from],
+            "Cestaking: not enough balance"
+        );
+        if (
+            block.timestamp < stakingSeasons[currentActiveSeason].withdrawEnds
+        ) {
             return _withdrawEarly(from, amount);
         } else {
-            return _withdrawAfterClose(from, amount);
+            return _withdrawAfterClose(from, amount, currentActiveSeason);
         }
     }
 
+    function withdrawOldSeason(uint256 amount, uint256 season)
+        external
+        _after(stakingSeasons[season].withdrawStarts)
+        _positive(amount)
+        _realAddress(msg.sender)
+        returns (bool)
+    {
+        address from = msg.sender;
+        require(
+            amount <= stakes[season][from],
+            "Cestaking: not enough balance"
+        );
+        require(
+            stakingSeasons.length - 1 > season,
+            "Cestaking: Active season not allowed, use withdraw()"
+        );
+        require(
+            block.timestamp > stakingSeasons[season].withdrawEnds,
+            "Cestaking: Old season withdraw period not ended, use withdraw()"
+        );
+
+        return _withdrawAfterClose(from, amount, season);
+    }
+
     function _withdrawEarly(address from, uint256 amount)
-    private
-    _realAddress(from)
-    returns (bool) {
+        private
+        _realAddress(from)
+        returns (bool)
+    {
         // This is the formula to calculate reward:
         // r = (earlyWithdrawReward / stakedTotal) * (block.timestamp - stakingEnds) / (withdrawEnds - stakingEnds)
         // w = (1+r) * a
-        uint256 denom = (withdrawEnds.sub(stakingEnds)).mul(stakedTotal);
-        uint256 reward = (
-        ( (block.timestamp.sub(stakingEnds)).mul(earlyWithdrawReward) ).mul(amount)
-        ).div(denom);
+        uint256 denom =
+            (
+                stakingSeasons[currentActiveSeason].withdrawEnds.sub(
+                    stakingSeasons[currentActiveSeason].stakingEnds
+                )
+            )
+                .mul(stakingSeasons[currentActiveSeason].stakedTotal);
+        uint256 reward =
+            (
+                (
+                    (
+                        block.timestamp.sub(
+                            stakingSeasons[currentActiveSeason].stakingEnds
+                        )
+                    )
+                        .mul(
+                        stakingSeasons[currentActiveSeason].earlyWithdrawReward
+                    )
+                )
+                    .mul(amount)
+            )
+                .div(denom);
         uint256 payOut = amount.add(reward);
-        rewardBalance = rewardBalance.sub(reward);
-        stakedBalance = stakedBalance.sub(amount);
-        _stakes[from] = _stakes[from].sub(amount);
+        stakingSeasons[currentActiveSeason].rewardBalance = stakingSeasons[
+            currentActiveSeason
+        ]
+            .rewardBalance
+            .sub(reward);
+        stakingSeasons[currentActiveSeason].stakedBalance = stakingSeasons[
+            currentActiveSeason
+        ]
+            .stakedBalance
+            .sub(amount);
+        stakes[currentActiveSeason][from] = stakes[currentActiveSeason][from]
+            .sub(amount);
         if (_payDirect(from, payOut)) {
-            emit PaidOut(tokenAddress, from, amount, reward);
+            emit PaidOut(
+                stakingSeasons[currentActiveSeason].tokenAddress,
+                from,
+                amount,
+                reward,
+                currentActiveSeason
+            );
             return true;
         }
         return false;
     }
 
-    function _withdrawAfterClose(address from, uint256 amount)
-    private
-    _realAddress(from)
-    returns (bool) {
-        uint256 reward = (rewardBalance.mul(amount)).div(stakedBalance);
+    function _withdrawAfterClose(
+        address from,
+        uint256 amount,
+        uint256 season
+    ) private _realAddress(from) returns (bool) {
+        uint256 reward =
+            (stakingSeasons[season].rewardBalance.mul(amount)).div(
+                stakingSeasons[season].stakedBalance
+            );
         uint256 payOut = amount.add(reward);
-        _stakes[from] = _stakes[from].sub(amount);
+        stakes[season][from] = stakes[season][from].sub(amount);
         if (_payDirect(from, payOut)) {
-            emit PaidOut(tokenAddress, from, amount, reward);
+            emit PaidOut(
+                stakingSeasons[season].tokenAddress,
+                from,
+                amount,
+                reward,
+                season
+            );
             return true;
         }
         return false;
     }
 
     function _stake(address staker, uint256 amount)
-    private
-    _after(stakingStarts)
-    _before(stakingEnds)
-    _positive(amount)
-    _hasAllowance(staker, amount)
-    returns (bool) {
+        private
+        _after(stakingSeasons[currentActiveSeason].stakingStarts)
+        _before(stakingSeasons[currentActiveSeason].stakingEnds)
+        _positive(amount)
+        _hasAllowance(staker, amount)
+        returns (bool)
+    {
         // check the remaining amount to be staked
         uint256 remaining = amount;
-        if (remaining > (stakingCap.sub(stakedBalance))) {
-            remaining = stakingCap.sub(stakedBalance);
+        if (
+            remaining >
+            (
+                stakingSeasons[currentActiveSeason].stakingCap.sub(
+                    stakingSeasons[currentActiveSeason].stakedBalance
+                )
+            )
+        ) {
+            remaining = stakingSeasons[currentActiveSeason].stakingCap.sub(
+                stakingSeasons[currentActiveSeason].stakedBalance
+            );
         }
         // These requires are not necessary, because it will never happen, but won't hurt to double check
         // this is because stakedTotal and stakedBalance are only modified in this method during the staking period
         require(remaining > 0, "Cestaking: Staking cap is filled");
-        require((remaining + stakedTotal) <= stakingCap, "Cestaking: this will increase staking amount pass the cap");
+        require(
+            (remaining + stakingSeasons[currentActiveSeason].stakedTotal) <=
+                stakingSeasons[currentActiveSeason].stakingCap,
+            "Cestaking: this will increase staking amount pass the cap"
+        );
         if (!_payMe(staker, remaining)) {
             return false;
         }
-        emit Staked(tokenAddress, staker, amount, remaining);
+        emit Staked(
+            stakingSeasons[currentActiveSeason].tokenAddress,
+            staker,
+            amount,
+            remaining,
+            currentActiveSeason
+        );
 
         if (remaining < amount) {
             // Return the unstaked amount to sender (from allowance)
             uint256 refund = amount.sub(remaining);
             if (_payTo(staker, staker, refund)) {
-                emit Refunded(tokenAddress, staker, refund);
+                emit Refunded(
+                    stakingSeasons[currentActiveSeason].tokenAddress,
+                    staker,
+                    refund,
+                    currentActiveSeason
+                );
             }
         }
 
         // Transfer is completed
-        stakedBalance = stakedBalance.add(remaining);
-        stakedTotal = stakedTotal.add(remaining);
-        _stakes[staker] = _stakes[staker].add(remaining);
+        stakingSeasons[currentActiveSeason].stakedBalance = stakingSeasons[
+            currentActiveSeason
+        ]
+            .stakedBalance
+            .add(remaining);
+        stakingSeasons[currentActiveSeason].stakedTotal = stakingSeasons[
+            currentActiveSeason
+        ]
+            .stakedTotal
+            .add(remaining);
+        stakes[currentActiveSeason][staker] = stakes[currentActiveSeason][
+            staker
+        ]
+            .add(remaining);
         return true;
     }
 
-    function _payMe(address payer, uint256 amount)
-    private
-    returns (bool) {
+    function _payMe(address payer, uint256 amount) private returns (bool) {
         return _payTo(payer, address(this), amount);
     }
 
-    function _payTo(address allower, address receiver, uint256 amount)
-    _hasAllowance(allower, amount)
-    private
-    returns (bool) {
+    function _payTo(
+        address allower,
+        address receiver,
+        uint256 amount
+    ) private _hasAllowance(allower, amount) returns (bool) {
         // Request to transfer amount from the contract to receiver.
         // contract does not own the funds, so the allower must have added allowance to the contract
         // Allower is the original owner.
-        ERC20Interface = ERC20(tokenAddress);
+        ERC20Interface = ERC20(
+            stakingSeasons[currentActiveSeason].tokenAddress
+        );
         return ERC20Interface.transferFrom(allower, receiver, amount);
     }
 
     function _payDirect(address to, uint256 amount)
-    private
-    _positive(amount)
-    returns (bool) {
-        ERC20Interface = ERC20(tokenAddress);
+        private
+        _positive(amount)
+        returns (bool)
+    {
+        ERC20Interface = ERC20(
+            stakingSeasons[currentActiveSeason].tokenAddress
+        );
         return ERC20Interface.transfer(to, amount);
     }
 
@@ -693,21 +962,43 @@ contract Cestaking {
         _;
     }
 
-    modifier _after(uint eventTime) {
-        require(block.timestamp >= eventTime, "Cestaking: bad timing for the request");
+    modifier _after(uint256 eventTime) {
+        require(
+            block.timestamp >= eventTime,
+            "Cestaking: bad timing for the request"
+        );
         _;
     }
 
-    modifier _before(uint eventTime) {
-        require(block.timestamp < eventTime, "Cestaking: bad timing for the request");
+    modifier _before(uint256 eventTime) {
+        require(
+            block.timestamp < eventTime,
+            "Cestaking: bad timing for the request"
+        );
         _;
     }
 
     modifier _hasAllowance(address allower, uint256 amount) {
         // Make sure the allower has provided the right allowance.
-        ERC20Interface = ERC20(tokenAddress);
+        ERC20Interface = ERC20(
+            stakingSeasons[currentActiveSeason].tokenAddress
+        );
         uint256 ourAllowance = ERC20Interface.allowance(allower, address(this));
-        require(amount <= ourAllowance, "Cestaking: Make sure to add enough allowance");
+        require(
+            amount <= ourAllowance,
+            "Cestaking: Make sure to add enough allowance"
+        );
+        _;
+    }
+
+    modifier _checkSeasonUpdate() {
+        if (
+            block.timestamp >
+            stakingSeasons[currentActiveSeason].withdrawEnds &&
+            stakingSeasons.length - 1 > currentActiveSeason
+        ) {
+            currentActiveSeason += 1;
+        }
         _;
     }
 }
