@@ -601,7 +601,6 @@ contract Cestaking is Ownable {
     function addSeason(
         address tokenAddress_,
         uint256 stakingStarts_,
-        uint256 stakingEnds_,
         uint256 withdrawStarts_,
         uint256 withdrawEnds_,
         uint256 stakingCap_
@@ -624,10 +623,10 @@ contract Cestaking is Ownable {
             stakingStarts = stakingStarts_;
         }
 
-        require(
-            stakingEnds_ > stakingSeasons[currentActiveSeason].stakingStarts,
-            "Cestaking: staking end must be after staking starts"
-        );
+        // require(
+        //     stakingEnds_ > stakingSeasons[currentActiveSeason].stakingStarts,
+        //     "Cestaking: staking end must be after staking starts"
+        // );
 
         require(
             withdrawStarts_ >= stakingSeasons[currentActiveSeason].stakingEnds,
@@ -645,7 +644,7 @@ contract Cestaking is Ownable {
             StakingSeason({
                 tokenAddress: tokenAddress_,
                 stakingStarts: stakingStarts,
-                stakingEnds: stakingEnds_,
+                stakingEnds: stakingStarts + 24 hours,
                 withdrawStarts: withdrawStarts_,
                 withdrawEnds: withdrawEnds_,
                 stakedTotal: 0,
